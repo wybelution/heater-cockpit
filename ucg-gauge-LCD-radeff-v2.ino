@@ -1,5 +1,7 @@
 /*
     Central Heating radiator efficiency monitor
+    wybelution@gmail.com
+    Q1-2020
 */
 
 #include <SPI.h>
@@ -269,20 +271,20 @@ void initialiseGraphs() {
 
   */
   Serial.println (F("initialiseGraphs()..."));
-  g_graph.posX = 5; //display coordinate
-  g_graph.posY = 235; //display coordinate
+  g_graph.posX = 5; //display coordinate of axis origin
+  g_graph.posY = 235; //display coordinate of axis origin
   g_graph.sizeX = 315;
   g_graph.sizeY = 85;
   g_graph.rangeY = 100; //0-100 degrees
 
-  // background of graph
+  // background of graph, a gradient red-to-blue
   ucg.setColor(0, 100, 0, 0);
   ucg.setColor(1, 100, 0, 0);
   ucg.setColor(2, 0, 0, 100);
   ucg.setColor(3, 0, 0, 100);
   ucg.drawGradientBox( 0, g_graph.posY - g_graph.sizeY, g_graph.sizeX + g_graph.posX, g_graph.sizeY);
 
-  //background of Y-axis
+  //background left-side of Y-axis, bright gradient red-to-blue
   ucg.setColor(0, 255, 0, 0);
   ucg.setColor(1, 255, 0, 0);
   ucg.setColor(2, 0, 0, 255);
@@ -322,20 +324,20 @@ void updateMsgBox (byte msgIdx) { //show messages and notifications
 void updateGraphs () {
 /*  
  *   draw the currValues of all three gauges in a continuous motion
+ *   the graph draws dots or glyphs, 4 by 4 pixels
  */
 
- word Xpos, Xoffset, Ypos1=0, Ypos2=0, Ypos3=0;
- const word cleanWindow = 8;
- 
- ucg.setFont (ucg_font_6x12_67_75);
- ucg.setFontPosCenter();
- ucg.setFontMode(UCG_FONT_MODE_TRANSPARENT);
+//TODO use SetClipRange to draw within a clipped area and avoid screen flickering
 
+ word Xpos, Xoffset, Ypos1=0, Ypos2=0, Ypos3=0; //Xpos is the center of the glyph, Xoffset is the number of px on the x-axes where the glyph starts
+ word XrefPos, YrefPos;
+ const word cleanWindow = 8; //this is the width of the area being cleaned before a new dot is drawn
+ 
  Xoffset = ( g_gauge[GAUGE1].measurements % (g_graph.sizeX - cleanWindow) );
  Xpos = g_graph.posX + 2 + Xoffset;
- Ypos1 = g_graph.posY - map(g_gauge[GAUGE1].currValue, g_gauge[GAUGE1].gaugeMin, g_gauge[GAUGE1].gaugeMax -1, 1, g_graph.sizeY);
- Ypos2 = g_graph.posY - map(g_gauge[GAUGE2].currValue, g_gauge[GAUGE2].gaugeMin, g_gauge[GAUGE2].gaugeMax -1, 1, g_graph.sizeY);
- Ypos3 = g_graph.posY - map(g_gauge[GAUGE3].currValue, g_gauge[GAUGE3].gaugeMin, g_gauge[GAUGE3].gaugeMax -1, 1, g_graph.sizeY);
+ Ypos1 = g_graph.posY - map(g_gauge[GAUGE1].currValue, g_gauge[GAUGE1].gaugeMin, g_gauge[GAUGE1].gaugeMax -2, 1, g_graph.sizeY);
+ Ypos2 = g_graph.posY - map(g_gauge[GAUGE2].currValue, g_gauge[GAUGE2].gaugeMin, g_gauge[GAUGE2].gaugeMax -2, 1, g_graph.sizeY);
+ Ypos3 = g_graph.posY - map(g_gauge[GAUGE3].currValue, g_gauge[GAUGE3].gaugeMin, g_gauge[GAUGE3].gaugeMax -2, 1, g_graph.sizeY);
 
   //clean the graph
   ucg.setColor(0, 100, 0, 0);
@@ -346,15 +348,44 @@ void updateGraphs () {
     ucg.drawGradientBox( Xpos, g_graph.posY - g_graph.sizeY, cleanWindow, g_graph.sizeY - 1); // also clean the leftover pixels leftside of the old glyphs
   }
   else {
-    ucg.drawGradientBox( Xpos + 3, g_graph.posY - g_graph.sizeY, cleanWindow, g_graph.sizeY - 1);  
+    ucg.drawGradientBox( Xpos + 3, g_graph.posY - g_graph.sizeY, cleanWindow, g_graph.sizeY - 1);  //draw small gradient graph to clean old dots
   }
-   
+
+ // draw green lines between 70% and 85% to indicate optimal efficiency area
+ 
+ ucg.setColor (0,120,0); // draw dark green reference line
+ YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.85F) ;
+ ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
+ YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.7F) ;
+ ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
+ 
+ ucg.setColor (0,0,150); // draw dark blue reference line
+ YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.55F) ;
+ ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
+ YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.35F) ;
+ ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
+
+ ucg.setColor (120,120,120); // grey reference lines at 25%, 50%, 75%
+ XrefPos = g_graph.posX + round ( float(g_graph.sizeX) * 0.25F );
+ ucg.drawVLine (XrefPos, g_graph.posY - g_graph.sizeY, g_graph.sizeY);
+ XrefPos = g_graph.posX + round ( float(g_graph.sizeX) * 0.5F );
+ ucg.drawVLine (XrefPos, g_graph.posY - g_graph.sizeY, g_graph.sizeY);
+ XrefPos = g_graph.posX + round ( float(g_graph.sizeX) * 0.75F );
+ ucg.drawVLine (XrefPos, g_graph.posY - g_graph.sizeY, g_graph.sizeY);
+
+ 
+ ucg.setFontPosCenter();
+ ucg.setFontMode(UCG_FONT_MODE_TRANSPARENT);
+ 
+ ucg.setFont (ucg_font_6x12_mf);
  ucg.setColor (255,0,0);
- ucg.drawGlyph( Xpos, Ypos1, 0, 198);
+ ucg.drawGlyph( Xpos, Ypos1, 0, 183); // red mark, middot
  ucg.setColor (0,0,255);
- ucg.drawGlyph( Xpos, Ypos2, 0, 198);
+ ucg.drawGlyph( Xpos, Ypos2, 0, 46); // blue mark, low dot
+
+ ucg.setFont (ucg_font_6x12_67_75);
  ucg.setColor (0,255,0);
- ucg.drawGlyph( Xpos, Ypos3, 0, 198);
+ ucg.drawGlyph( Xpos, Ypos3, 0, 252); //green mark
  
 } //end of updateGraphs()
 
@@ -369,7 +400,7 @@ void updateGauge ( byte gaugeIdx, byte mode) {
   byte newValueSect, prevValuesect, newAvgSect, prevAvgSect;
   float sectorRange = (float(g_gauge[gaugeIdx].gaugeMax) / float(VISIBLESECTORS));  //sectorRange is the number of unity values within 1 sector (e.g. 5 degrees)
 
-  // TODO avoid flicker: don't update currValue and range if the value didn't change
+  // TODO avoid flicker: don't update the visible currValue and range if the value didn't change
 
   Serial.print (F("updateGauges()...gauge = ")); Serial.println (gaugeIdx);
   Serial.print (F("currValue = ")); Serial.println(g_gauge[gaugeIdx].currValue);
