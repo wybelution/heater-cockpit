@@ -150,7 +150,6 @@ struct s_gauge {  //structure that holds all the data for a graph gauge
   short avgW; //weighted average counts every measurement: sum/measurements;
   char unitchar; //the character for the unit (e.g. %, degrees, etc);
   char title[12];  //the name of the gauge
-//  boolean sectorActive[VISIBLESECTORS];  //indicator for every segment if it is within measured range, UNUSED?
   byte valueSect, avgSect; //remember the sector containing value mark and average mark
   byte gaugeMin, gaugeMax;  //set the absolute value range for the gauge
   byte belowOpt, aboveOpt;  //lower and upper threshold of the Optimum (temperature/efficiency) range of the gauge
@@ -270,6 +269,9 @@ void initialiseGraphs() {
   /* initialise alle gauges and prepare for showing actual data
 
   */
+  word YrefPos1, YrefPos2;
+// TODO stop using absolute coordinates, use screen-size dependant coordinates instead
+
   Serial.println (F("initialiseGraphs()..."));
   g_graph.posX = 5; //display coordinate of axis origin
   g_graph.posY = 235; //display coordinate of axis origin
@@ -282,7 +284,23 @@ void initialiseGraphs() {
   ucg.setColor(1, 100, 0, 0);
   ucg.setColor(2, 0, 0, 100);
   ucg.setColor(3, 0, 0, 100);
-  ucg.drawGradientBox( 0, g_graph.posY - g_graph.sizeY, g_graph.sizeX + g_graph.posX, g_graph.sizeY);
+//  ucg.drawGradientBox( 0, g_graph.posY - g_graph.sizeY, g_graph.sizeX + g_graph.posX, g_graph.sizeY);
+
+ // draw green lines between 70% and 85% to indicate optimal efficiency area
+ 
+  ucg.setColor (0,80,0); // draw dark green box
+  YrefPos1 =  g_graph.posY - round ( float(g_graph.sizeY) * 0.85F);
+  YrefPos2 = (g_graph.posY - round ( float(g_graph.sizeY) * 0.7F)) - YrefPos1 ;
+  ucg.drawBox (g_graph.posX, YrefPos1, g_graph.sizeX, YrefPos2);
+  ucg.setColor (0,180,0); // draw dark green frame
+//  ucg.drawFrame (g_graph.posX, YrefPos1, g_graph.sizeX, YrefPos2);
+  
+  ucg.setColor (0,0,80); // draw dark blue box
+  YrefPos1 =  g_graph.posY - round ( float(g_graph.sizeY) * 0.55F);
+  YrefPos2 = (g_graph.posY - round ( float(g_graph.sizeY) * 0.35F)) -YrefPos1 ;
+  ucg.drawBox (g_graph.posX, YrefPos1, g_graph.sizeX, YrefPos2);
+  ucg.setColor (0,0,180); // draw blue frame
+//  ucg.drawFrame (g_graph.posX, YrefPos1, g_graph.sizeX, YrefPos2);
 
   //background left-side of Y-axis, bright gradient red-to-blue
   ucg.setColor(0, 255, 0, 0);
@@ -330,15 +348,17 @@ void updateGraphs () {
 //TODO use SetClipRange to draw within a clipped area and avoid screen flickering
 
  word Xpos, Xoffset, Ypos1=0, Ypos2=0, Ypos3=0; //Xpos is the center of the glyph, Xoffset is the number of px on the x-axes where the glyph starts
- word XrefPos, YrefPos;
+ word XrefPos, YrefPos, YrefPos1, YrefPos2;
  const word cleanWindow = 8; //this is the width of the area being cleaned before a new dot is drawn
  
- Xoffset = ( g_gauge[GAUGE1].measurements % (g_graph.sizeX - cleanWindow) );
- Xpos = g_graph.posX + 2 + Xoffset;
+ Xoffset = ( g_gauge[GAUGE1].measurements % (g_graph.sizeX - cleanWindow) ); //determine the X-location to plot new dots
+ Xpos = g_graph.posX + 2 + Xoffset; //actual location depends on the origine of the graph and the thickness of the dot (2)
+ // calculate the Y positions of the 3 graph lines: temp1 (red), temp2 (blue) and efficiency (3)
  Ypos1 = g_graph.posY - map(g_gauge[GAUGE1].currValue, g_gauge[GAUGE1].gaugeMin, g_gauge[GAUGE1].gaugeMax -2, 1, g_graph.sizeY);
  Ypos2 = g_graph.posY - map(g_gauge[GAUGE2].currValue, g_gauge[GAUGE2].gaugeMin, g_gauge[GAUGE2].gaugeMax -2, 1, g_graph.sizeY);
  Ypos3 = g_graph.posY - map(g_gauge[GAUGE3].currValue, g_gauge[GAUGE3].gaugeMin, g_gauge[GAUGE3].gaugeMax -2, 1, g_graph.sizeY);
 
+/*
   //clean the graph
   ucg.setColor(0, 100, 0, 0);
   ucg.setColor(1, 100, 0, 0);
@@ -350,20 +370,32 @@ void updateGraphs () {
   else {
     ucg.drawGradientBox( Xpos + 3, g_graph.posY - g_graph.sizeY, cleanWindow, g_graph.sizeY - 1);  //draw small gradient graph to clean old dots
   }
+*/
+// no gradient anymore, just clean the area (black)
+  ucg.setColor (0,BLACK,BLACK,BLACK);
+  if ( Xoffset == 0 ) {
+    ucg.drawBox( Xpos, g_graph.posY - g_graph.sizeY, cleanWindow, g_graph.sizeY - 1); // also clean the leftover pixels leftside of the old glyphs   
+  }
+  else {
+    ucg.drawBox( Xpos + 3, g_graph.posY - g_graph.sizeY, cleanWindow, g_graph.sizeY - 1);  //draw small gradient graph to clean old dots
+  }
+  
 
- // draw green lines between 70% and 85% to indicate optimal efficiency area
+ // draw colored boxes between 70% and 85% (green) and 55% and 35% (blue) to indicate optimal efficiency area
  
- ucg.setColor (0,120,0); // draw dark green reference line
- YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.85F) ;
- ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
- YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.7F) ;
- ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
+ ucg.setColor (0,80,0); // draw dark green box
+ YrefPos1 =  g_graph.posY - round ( float(g_graph.sizeY) * 0.85F);
+ YrefPos2 = (g_graph.posY - round ( float(g_graph.sizeY) * 0.7F)) - YrefPos1 ;
+ ucg.drawBox (Xpos+3, YrefPos1, cleanWindow, YrefPos2);
+ ucg.setColor (0,180,0); // draw dark green frame
+// ucg.drawFrame (Xpos, YrefPos1, cleanWindow, YrefPos2);
  
- ucg.setColor (0,0,150); // draw dark blue reference line
- YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.55F) ;
- ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
- YrefPos = g_graph.posY - round ( float(g_graph.sizeY) * 0.35F) ;
- ucg.drawHLine (g_graph.posX, YrefPos, g_graph.sizeX);
+ ucg.setColor (0,0,80); // draw dark blue box
+ YrefPos1 =  g_graph.posY - round ( float(g_graph.sizeY) * 0.55F);
+ YrefPos2 = (g_graph.posY - round ( float(g_graph.sizeY) * 0.35F)) -YrefPos1 ;
+ ucg.drawBox (Xpos+3, YrefPos1, cleanWindow, YrefPos2);
+ ucg.setColor (0,0,180); // draw blue frame
+// ucg.drawFrame (Xpos, YrefPos1, cleanWindow, YrefPos2);
 
  ucg.setColor (120,120,120); // grey reference lines at 25%, 50%, 75%
  XrefPos = g_graph.posX + round ( float(g_graph.sizeX) * 0.25F );
@@ -379,13 +411,17 @@ void updateGraphs () {
  
  ucg.setFont (ucg_font_6x12_mf);
  ucg.setColor (255,0,0);
- ucg.drawGlyph( Xpos, Ypos1, 0, 183); // red mark, middot
+ ucg.drawGlyph( Xpos, Ypos1, 0, 183); // red mark, ch-183 is a middot
  ucg.setColor (0,0,255);
- ucg.drawGlyph( Xpos, Ypos2, 0, 46); // blue mark, low dot
+ ucg.drawGlyph( Xpos, Ypos2, 0, 46); // blue mark, ch-46 is a low dot
 
  ucg.setFont (ucg_font_6x12_67_75);
  ucg.setColor (0,255,0);
- ucg.drawGlyph( Xpos, Ypos3, 0, 252); //green mark
+ ucg.drawGlyph( Xpos, Ypos3, 0, 252); //green mark, ch-252 is a small square
+
+ ucg.setFont (ucg_font_6x13_67_75);
+ ucg.setColor (WHITE,WHITE,WHITE);
+ ucg.drawGlyph( Xpos+4, g_graph.posY - 5, 0, 81); //green mark, ch-97 is an arrow-up
  
 } //end of updateGraphs()
 
