@@ -197,7 +197,7 @@ void initialiseGauges() {
   g_gauge[GAUGE1].gaugeMax = 99; //max is 99 degrees
   g_gauge[GAUGE1].belowOpt = 40;
   g_gauge[GAUGE1].aboveOpt = 60;
-  strcpy(g_gauge[GAUGE1].title, "aanvoer");
+  strcpy(g_gauge[GAUGE1].title, "in-flow");
   g_gauge[GAUGE1].colorArray = (unsigned long *)c_sectorColorReds; //use green sector colors for this gauge
   g_gauge[GAUGE1].cntrX = 55;
   g_gauge[GAUGE1].cntrY = 70;
@@ -208,7 +208,7 @@ void initialiseGauges() {
   g_gauge[GAUGE2].gaugeMax = 99; //max is 99 degrees
   g_gauge[GAUGE2].belowOpt = 32; //optimum incoming watertemp = 30-48 (but never > 55)
   g_gauge[GAUGE2].aboveOpt = 48; 
-  strcpy(g_gauge[GAUGE2].title, "afvoer");
+  strcpy(g_gauge[GAUGE2].title, "out-flow");
   g_gauge[GAUGE2].colorArray = (unsigned long *)c_sectorColorBlues; //use green sector colors for this gauge
   g_gauge[GAUGE2].cntrX = 55 + 107;
   g_gauge[GAUGE2].cntrY = 70 + 0;
@@ -219,7 +219,7 @@ void initialiseGauges() {
   g_gauge[GAUGE3].gaugeMax = 100; //max is 100 procent
   g_gauge[GAUGE3].belowOpt = 70; //optimum efficiency watertemp = 30-40
   g_gauge[GAUGE3].aboveOpt = 85; 
-  strcpy(g_gauge[GAUGE3].title, "rendement");
+  strcpy(g_gauge[GAUGE3].title, "efficiency");
   g_gauge[GAUGE3].colorArray = (unsigned long *)c_sectorColorGreens; //use green sector colors for this gauge
   g_gauge[GAUGE3].cntrX = 55 + 107 + 107;
   g_gauge[GAUGE3].cntrY = 70 + 0;
@@ -736,6 +736,7 @@ void loop() {
   // TODO: add animated progress indicator
   // TODO: keep track of time, show the duration of the measurements
   // TODO: use a timer to do the measurements every X seconds. Show the progress indicator working between the measurements
+  // TODO show battery indicator
 
   static float inTemp, outTemp, efficiency;
 
@@ -870,8 +871,8 @@ void loop() {
   
   //  updateGraph(GAUGE2);
 
-//  delay (SAMPLESPEED * 1000);
-  delay (10);
+  delay (SAMPLESPEED * 1000);
+//  delay (10);
   //  while(true) { };
 
 }
